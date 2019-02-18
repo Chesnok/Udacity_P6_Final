@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="http://d3js.org/d3.v3.min.js"></script>
+  <script src="http://dimplejs.org/dist/dimple.v2.1.0.min.js"></script>
+  
+  <style type="text/css">
+  <style> 
+    circle {
+      opacity: 0.6;
+      fill: red;
+    }
+    h2 {
+      text-align: center;
+    }
+    #xAxis.tick line{
+      visibility:hidden;
+    }
+  </style>
+
+
+
+  <script type="text/javascript">
+      function draw(data) {
+      
+      /*
+        D3.js setup code
+      */
+          "use strict";
+          var padding = 50,
+              width = 960,
+              height = 500,
+              indicator = width/7;
+              
+          var margin = 70,
+              width = 1300 - margin,
+              height = 800 - margin;
+
+          d3.select('body')
+            .append('h2')
+            .text("Prosper Loans Yield Performance");
+
+      
+          var svg = d3.select("body")
+            .append("svg")
+              .attr("width", width + margin)
+              .attr("height", height + margin)
+            .append('g')
+              .attr('class','chart');
+
+      /*
+        Dimple.js Chart construction code
+      */
+          var quarters = ["Q2 2009","Q3 2009","Q4 2009","Q1 2010","Q2 2010","Q3 2010","Q4 2010","Q1 2011","Q2 2011","Q3 2011",
+                          "Q4 2011","Q1 2012","Q2 2012","Q3 2012","Q4 2012","Q1 2013","Q2 2013","Q3 2013","Q4 2013","Q1 2014"];
+          data = dimple.filterData(data, "Quarter", quarters);
+
+          var qChart = new dimple.chart(svg, data);
+          var defaultColor = qChart.defaultColors[0];
+          var tickColor = qChart.defaultColors[3];
+
+          
+          var frame = 3000; 
+          var firstTick = true;
+
+          
+          qChart.setBounds(width - indicator, 75, indicator, height - 150);
+
+          
+          var qIndicator_y = qChart.addCategoryAxis("y", "Quarter");
+          qIndicator_y.addOrderRule(quarters, true);
+
+
+          
+          var qIndicator_x = qChart.addMeasureAxis("x", "Number of Loans");
+                    
+          qIndicator_x.tickFormat = 'f';
+          qIndicator_x.ticks = 4;
+          qIndicator_x.overrideMin = 0.05;
+
+          //debugger;
+
+          
+          var s = qChart.addSeries(quarters, dimple.plot.bar);
+          s.aggregate = dimple.aggregateMethod.avg; 
+          s.addEventHandler("click", qIndicator_click);
+
+          qChart.draw();
+
+          
+          qIndicator_y.titleShape.remove();
+          qIndicator_y.shapes.selectAll("line,path").remove();
+
+          
+          s.shapes
+              .attr("rx", 5)
+              .attr("ry", 5)
+              .style("opacity", 0.3)
+              .style("fill", function (d) { return (d.y === 'Q3 2009' ? tickColor.fill : defaultColor.fill) })
+              .style("stroke", function (d) { return (d.y === 'Q3 2009' ? tickColor.stroke : defaultColor.stroke) });
+
+          
+          qIndicator_y.shapes.selectAll("text")
+              .style("text-anchor", "start")
+              .style("font-size", "11px")
+              .attr("transform", "translate(20, 0)");
+          
+          
+          svg.selectAll("title_text")
+              .data(["Click on Quarter bar", "to pause/resume animation"])
+              .enter()
+              .append('text')
+              .attr('x', width - indicator - padding/2)
+              .attr('y', function (d, i) { return 50 + i * 12; })
+              .style("font-size", "14px")
+              .style("color", "Black")
+              .style("font-style", "italic")
+              .text(function (d) { return d; });
+
+          
+          
+          var myChart = new dimple.chart(svg, data);
+
+          
+          myChart.setBounds(padding, 100, 1100 - 2 * padding, 550);
+          var xAxis = myChart.addMeasureAxis("x", "Credit Score");
+          var yAxis = myChart.addMeasureAxis("y", "Lenders Yield");
+          var zAxis = myChart.addMeasureAxis("z", "Number of Loans");
+                              
+          
+          xAxis.overrideMin = 650;
+          xAxis.overrideMax = 800; 
+          yAxis.overrideMax = 0.26;
+          yAxis.overrideMin = 0.1;
+
+          xAxis.tickFormat = 'f';
+          yAxis.tickFormat = '%'; 
+
+          xAxis.title = "Credit Score";
+          yAxis.title = "Lenders Yield";
+          zAxis.title = "Number of Loans";
+
+               var bubbleSeries = myChart.addSeries("State", dimple.plot.bubble)
+          
+         
+          var statesArea = myChart.addLegend(150, 700, 850, 100, "left");
+          var story = myChart.setStoryboard("Quarter", qIndicator_tick);
+          story.frameDuration = frame;
+          story.addOrderRule(quarters);
+
+          //debugger;
+
+          myChart.draw();
+          
+          myChart.legends = [];
+
+          var states = dimple.getUniqueValues(data, "State");
+          statesArea.shapes.selectAll("rect")
+            
+           
+            .on("click", function (e)  {
+              
+              var hide = false;
+              var newFilters = [];
+              
+              states.forEach(function (f) {
+                if (f === e.aggField.slice(-1)[0]) {
+                  hide = true;
+                } else {
+                  newFilters.push(f);
+                }
+              });
+              if (hide) {
+                d3.select(this).style("opacity", 0.2);
+              } else {
+                newFilters.push(e.aggField.slice(-1)[0]);
+                d3.select(this).style("opacity", 0.8);
+              }
+               
+              states = newFilters;
+              //Filter the data
+              myChart.data = dimple.filterData(data, "State", states);
+  
+
+              myChart.draw(800);
+
+              if (!isticking) { // only keep animation paused if it is already paused
+                story.pauseAnimation();
+              }
+              
+            });
+
+
+          //Remove story label
+          story.storyLabel.remove();
+
+          var isticking = true;  // variable to know if story is ticking or not
+          
+          function qIndicator_click(e) {
+            story.pauseAnimation();
+            // If selected already re-start the animation
+            if (e.yValue === story.getFrameValue()) {
+                story.startAnimation();
+                isticking = true;
+            } else { // else pause and move to selected month
+                story.goToFrame(e.yValue);
+                story.pauseAnimation();
+                isticking = false;
+            }
+          }
+
+          
+          function qIndicator_tick(e) {
+
+              if (!firstTick) {
+                  // Color all shapes the same
+                  s.shapes
+                        .transition()
+                        .duration(frame / 2)
+                        .style("fill", function (d) { return (d.y === e ? tickColor.fill : defaultColor.fill) })
+                        .style("stroke", function(d) { return (d.y === e ? tickColor.stroke : defaultColor.stroke) })
+              }
+              firstTick = false; 
+          }
+
+          //Add Main Chart text
+          svg.append("text")
+            .attr("x", 20)
+            .attr("y", 15)
+            .style("text-anchor", "left")
+            .style("font-family", "sans-serif")
+            .style("font-weight", "bold")
+            .text("Chart demonstrates quarterly progression of Prosper Lenders return on investment and its dependance on average credit score.")
+
+          //Add Explanatory text
+          svg.selectAll("explanation_text")
+            .data(["Several trands are noticable: States yealds vary dramatically in 2009 and start to cluster together as Number of loas increases in 2012.",
+              "Also starting with 2012 avarage credit scores and yeild start dropping"])
+            .enter()
+            .append("text")
+              .attr("x", 20)
+              .attr("y", function(d, i) { return 40 + i *14; } )
+              .style("font-size", "11px")
+              .style("color", "Black")
+              .style("font-family", "sans-serif")
+              .text(function (d) { return d; });
+
+          svg.selectAll("states_legend_label")
+            .data(["States by Number", "of loans issued:"])
+            .enter()
+            .append("text")
+              .attr("x", 20)
+              .attr('y', function (d, i) { return 700 + i * 14; })
+              .style("font-size", "14px")
+              .style("font-weight", "bold")
+              .style("color", "Black")
+              .style("font-family", "sans-serif")
+              .text(function (d) { return d; });
+
+          svg.selectAll("states_click_label")
+            .data(["*Click State box to show/hide states data"])
+            .enter()
+            .append("text")
+              .attr("x",20)
+              .attr("y", 800)
+              .style("font-size", "10px")
+              .style("font-style", "italic")
+              .text(function (d) { return d; });
+          
+          svg.selectAll("explanation_title")
+            .data(["Number of Loans:"])
+            .enter()
+            .append("text")
+            .attr("x", 800)
+            .attr("y", 40)
+            .style("font-size", "14px")
+            .style("font-weight", "bold")
+            .style("color", "Black")
+            .style("font-family", "sans-serif")
+            .text(function (d) { return d; } );
+          
+          svg.selectAll("size_explanation")
+            .data(["Chart bubble size reflects", "number of loans issued."])
+            .enter()
+            .append("text")
+            .attr("x", 800)
+            .attr("y", function (d, i) { return 54 + i * 12; })
+            .style("font-size", "10px")
+            .style("font-family", "sans-serif")
+            .text(function (d) { return d; });          
+        };
+      </script>
+  </head>
+<body>
+<script type="text/javascript">
+  //format = d3.time.format("%m-%Y");
+  //d3.csv("./data/clean_prosper_data_3.csv", function(d) {
+          //d['Credit Score'] = +d['Credit Score'];
+          //d['Number of Loans'] = +d['Number of Loans']; 
+          //d['Prosper Score  '] = +d['Prosper Score '];
+          //d['Lenders Yield'] = +d['Lenders Yield'];
+          //return d;
+        //}, draw);
+  d3.csv("./data/clean_prosper_data_3.csv", draw);
+</script>
+</body>
+</html>

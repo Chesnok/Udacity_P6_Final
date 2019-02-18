@@ -1,0 +1,10 @@
+circle {
+      opacity: 0.8;
+      //fill: red;
+    }
+h2 {
+      text-align: center;
+    }
+    #xAxis.tick line{
+      visibility:hidden;
+    }
