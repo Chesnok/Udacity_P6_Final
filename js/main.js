@@ -10,4 +10,4 @@
     Use D3 to load the CSV file
     and pass the contents of it to the draw function
  */       
-  d3.csv("/data/clean_prosper_data_3.csv", draw);
+  d3.csv("data/clean_prosper_data_3.csv", draw);
